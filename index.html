@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>실시간 이자 카운터</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red: #ff2b2b;
+      --red-dim: #7a0000;
+      --orange: #ff8c00;
+      --orange-dim: #7a4000;
+      --bg: #090909;
+      --panel: #0f0f0f;
+      --border: #1e1e1e;
+      --text: #e8e8e8;
+      --muted: #555;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.35;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    .wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 1.2rem;
+      gap: 1.5rem;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      animation: fadeDown 0.8s ease both;
+    }
+    .header .live-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.35em;
+      color: var(--red);
+      margin-bottom: 0.5rem;
+    }
+    .header .subtitle {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: clamp(1rem, 3.5vw, 1.5rem);
+      font-weight: 300;
+      color: #aaa;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.2rem;
+    }
+    .header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.8rem, 6vw, 3rem);
+      letter-spacing: 0.05em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    /* Card */
+    .card {
+      width: 100%;
+      max-width: 680px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--red);
+      padding: 2.5rem 2rem;
+      position: relative;
+      animation: fadeUp 0.9s 0.2s ease both;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--red), transparent);
+      animation: glowline 3s linear infinite;
+    }
+    .card-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+    }
+
+    /* Counter */
+    .counter-wrap { position: relative; }
+    #counter {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: clamp(2rem, 8vw, 4.2rem);
+      color: var(--red);
+      letter-spacing: 0.03em;
+      line-height: 1;
+      word-break: break-all;
+      text-shadow: 0 0 30px rgba(255,43,43,0.4), 0 0 60px rgba(255,43,43,0.15);
+    }
+    .currency-suffix {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.2rem, 4vw, 2rem);
+      color: var(--red-dim);
+      margin-left: 0.3rem;
+      vertical-align: bottom;
+    }
+    .counter-korean {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: clamp(1rem, 3vw, 1.3rem);
+      font-weight: 300;
+      color: #888;
+      margin-top: 0.5rem;
+      letter-spacing: 0.05em;
+    }
+    .cursor {
+      display: inline-block;
+      width: 3px;
+      height: 0.9em;
+      background: var(--red);
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+    .flash { animation: flash 0.12s ease; }
+    @keyframes flash {
+      0%   { text-shadow: 0 0 30px rgba(255,43,43,0.4), 0 0 60px rgba(255,43,43,0.15); }
+      50%  { text-shadow: 0 0 60px rgba(255,43,43,0.9), 0 0 120px rgba(255,43,43,0.5); }
+      100% { text-shadow: 0 0 30px rgba(255,43,43,0.4), 0 0 60px rgba(255,43,43,0.15); }
+    }
+
+    .divider { height: 1px; background: var(--border); margin: 2rem 0; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .stat {
+      padding: 1rem;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+    }
+    .stat-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .stat-value {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: clamp(0.8rem, 2.5vw, 1rem);
+      color: var(--text);
+    }
+    .stat-value.accent { color: var(--orange); }
+
+    /* Kakao card */
+    .kakao-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+      width: 100%;
+      max-width: 680px;
+      background: #1a1200;
+      border: 1px solid #3a2a00;
+      border-top: 2px solid #fee500;
+      padding: 1.4rem 2rem;
+      text-decoration: none;
+      color: #fee500;
+      transition: background 0.2s, border-color 0.2s;
+      animation: fadeUp 0.9s 0.3s ease both;
+    }
+    .kakao-card:hover { background: #241900; border-color: #fee500; }
+    .kakao-icon { font-size: 1.4rem; }
+    .kakao-text {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: clamp(0.95rem, 3vw, 1.15rem);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      flex: 1;
+      text-align: center;
+    }
+    .kakao-arrow { font-size: 1.2rem; transition: transform 0.2s; }
+    .kakao-card:hover .kakao-arrow { transform: translateX(5px); }
+
+    /* Per-member card */
+    .card-member { border-top-color: var(--orange); }
+    .card-member::before {
+      background: linear-gradient(90deg, transparent, var(--orange), transparent);
+    }
+    .card-sublabel {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ddd;
+      margin-bottom: 1rem;
+      letter-spacing: 0.05em;
+    }
+    #counter-per {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: clamp(2rem, 8vw, 4.2rem);
+      color: var(--orange);
+      letter-spacing: 0.03em;
+      line-height: 1;
+      word-break: break-all;
+      text-shadow: 0 0 30px rgba(255,140,0,0.4), 0 0 60px rgba(255,140,0,0.15);
+    }
+    .currency-suffix-orange {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.2rem, 4vw, 2rem);
+      color: var(--orange-dim);
+      margin-left: 0.3rem;
+      vertical-align: bottom;
+    }
+    .cursor-orange {
+      display: inline-block;
+      width: 3px;
+      height: 0.9em;
+      background: var(--orange);
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+
+    /* Ticker */
+    .ticker-wrap {
+      width: 100%;
+      max-width: 680px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: rgba(255,43,43,0.04);
+      padding: 0.6rem 0;
+      animation: fadeUp 1s 0.4s ease both;
+    }
+    .ticker-inner { display: flex; white-space: nowrap; animation: ticker 20s linear infinite; }
+    .ticker-item {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      padding: 0 2rem;
+    }
+    .ticker-item span { color: var(--red); }
+    @keyframes ticker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* Footer */
+    .footer {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-align: center;
+      animation: fadeUp 1s 0.6s ease both;
+    }
+
+    /* Keyframes */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes glowline {
+      0%, 100% { opacity: 0.3; }
+      50%       { opacity: 1; }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    @media (max-width: 480px) {
+      .stats { grid-template-columns: 1fr; }
+      .card, .card-member { padding: 1.8rem 1.2rem; }
+      .kakao-card { padding: 1.2rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <div class="header">
+      <div class="live-label">⬤ LIVE  //  실시간 이자 카운터</div>
+      <div class="subtitle">상대원 2구역</div>
+      <h1>누적 이자 현황 (추정)</h1>
+    </div>
+
+    <div class="card">
+      <div class="card-label">// TOTAL_INTEREST &nbsp;&nbsp; KRW</div>
+      <div class="counter-wrap">
+        <span id="counter">111,300,000,000</span><span class="currency-suffix">원</span><span class="cursor"></span>
+      </div>
+      <div id="counter-korean" class="counter-korean">1113억원</div>
+
+      <div class="divider"></div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">초당 이자</div>
+          <div class="stat-value accent">+ 1,157 원 / sec</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">분당 이자</div>
+          <div class="stat-value">69,420 원 / min</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">시간당 이자</div>
+          <div class="stat-value">4,165,200 원 / hr</div>
+        </div>
+      </div>
+    </div>
+
+    <a href="https://open.kakao.com/o/gZGOUhfi" target="_blank" class="kakao-card">
+      <span class="kakao-icon">💬</span>
+      <span class="kakao-text">왜 이렇게 되었는지 알아보기 <span style="font-size:0.8em; opacity:0.7;">(pw: 0317720)</span></span>
+      <span class="kakao-arrow">→</span>
+    </a>
+
+    <div class="card card-member">
+      <div class="card-label">// PER_MEMBER &nbsp;&nbsp; KRW</div>
+      <div class="card-sublabel">조합 1인당 내야할 돈</div>
+      <div class="counter-wrap">
+        <span id="counter-per">0</span><span class="currency-suffix-orange">원</span><span class="cursor-orange"></span>
+      </div>
+    </div>
+
+    <div class="ticker-wrap">
+      <div class="ticker-inner" id="ticker"></div>
+    </div>
+
+    <div class="footer">
+      RATE: 1,157 KRW/SEC &nbsp;|&nbsp; BASE: 2026.01.01 KST
+    </div>
+
+  </div>
+
+  <script>
+    const BASE  = 111_300_000_000n;
+    const RATE  = 1_157n;
+    const EPOCH = new Date('2025-12-31T15:00:00Z').getTime(); // 2026-01-01 00:00:00 KST
+
+    const counterEl       = document.getElementById('counter');
+    const counterPerEl    = document.getElementById('counter-per');
+    const counterKoreanEl = document.getElementById('counter-korean');
+
+    function formatKRW(n) { return n.toLocaleString('ko-KR'); }
+
+    function toKorean(n) {
+      const jo       = n / 1_000_000_000_000n;
+      const rem1     = n % 1_000_000_000_000n;
+      const eok      = rem1 / 100_000_000n;
+      const rem2     = rem1 % 100_000_000n;
+      const cheonman = rem2 / 10_000_000n;
+      let result = '';
+      if (jo > 0n)       result += jo.toLocaleString('ko-KR') + '조 ';
+      if (eok > 0n)      result += eok.toLocaleString('ko-KR') + '억 ';
+      if (cheonman > 0n) result += cheonman.toLocaleString('ko-KR') + '천만';
+      return result.trim() + '원';
+    }
+
+    let lastSec = -1n;
+
+    function tick() {
+      const secs    = BigInt(Math.floor((Date.now() - EPOCH) / 1000));
+      const current = BASE + RATE * secs;
+
+      counterEl.textContent       = formatKRW(current);
+      counterPerEl.textContent    = formatKRW(current / 2300n);
+      counterKoreanEl.textContent = toKorean(current);
+
+      if (secs !== lastSec) {
+        lastSec = secs;
+        counterEl.classList.remove('flash');
+        void counterEl.offsetWidth;
+        counterEl.classList.add('flash');
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    const tickerEl = document.getElementById('ticker');
+    const items = [
+      '이자 실시간 누적 중',
+      '초당 <span>+1,157원</span> 증가',
+      '분당 <span>+69,420원</span> 증가',
+      '시간당 <span>+4,165,200원</span> 증가',
+      '일당 <span>+99,964,800원</span> 증가',
+      '연간 <span>+36,507,192,000원</span> 증가',
+    ];
+    tickerEl.innerHTML = [...items, ...items]
+      .map(t => `<span class="ticker-item">${t} &nbsp;&nbsp; // &nbsp;&nbsp; </span>`)
+      .join('');
+
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
