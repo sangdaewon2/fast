@@ -60,10 +60,7 @@
     }
 
     /* Header */
-    .header {
-      text-align: center;
-      animation: fadeDown 0.8s ease both;
-    }
+    .header { text-align: center; animation: fadeDown 0.8s ease both; }
     .header .live-label {
       font-family: 'Share Tech Mono', monospace;
       font-size: 0.7rem;
@@ -115,7 +112,7 @@
       margin-bottom: 1.2rem;
     }
 
-    /* Counter */
+    /* Main counter */
     .counter-wrap { position: relative; }
     #counter {
       font-family: 'Share Tech Mono', monospace;
@@ -135,11 +132,11 @@
     }
     .counter-korean {
       font-family: 'Noto Sans KR', sans-serif;
-      font-size: clamp(1rem, 3vw, 1.3rem);
-      font-weight: 300;
-      color: #888;
-      margin-top: 0.5rem;
-      letter-spacing: 0.05em;
+      font-size: clamp(1.1rem, 3.5vw, 1.5rem);
+      font-weight: 400;
+      color: #cc4444;
+      margin-top: 0.6rem;
+      letter-spacing: 0.06em;
     }
     .cursor {
       display: inline-block;
@@ -199,16 +196,21 @@
       animation: fadeUp 0.9s 0.3s ease both;
     }
     .kakao-card:hover { background: #241900; border-color: #fee500; }
-    .kakao-icon { font-size: 1.4rem; }
+    .kakao-icon { font-size: 1.4rem; flex-shrink: 0; }
     .kakao-text {
       font-family: 'Noto Sans KR', sans-serif;
-      font-size: clamp(0.95rem, 3vw, 1.15rem);
+      font-size: clamp(0.9rem, 3vw, 1.1rem);
       font-weight: 700;
       letter-spacing: 0.05em;
       flex: 1;
       text-align: center;
     }
-    .kakao-arrow { font-size: 1.2rem; transition: transform 0.2s; }
+    .kakao-pw {
+      font-size: 0.8em;
+      opacity: 0.7;
+      font-weight: 400;
+    }
+    .kakao-arrow { font-size: 1.2rem; transition: transform 0.2s; flex-shrink: 0; }
     .kakao-card:hover .kakao-arrow { transform: translateX(5px); }
 
     /* Per-member card */
@@ -284,7 +286,6 @@
       animation: fadeUp 1s 0.6s ease both;
     }
 
-    /* Keyframes */
     @keyframes fadeDown {
       from { opacity: 0; transform: translateY(-20px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -314,8 +315,8 @@
 
     <div class="header">
       <div class="live-label">⬤ LIVE  //  실시간 이자 카운터</div>
-      <div class="subtitle">상대원 2구역</div>
-      <h1>누적 이자 현황 (추정)</h1>
+      <div class="subtitle">조합장이 쌓아올린</div>
+      <h1>누적 이자 현황</h1>
     </div>
 
     <div class="card">
@@ -326,12 +327,9 @@
       <div id="counter-korean" class="counter-korean">1113억원</div>
 
       <div class="divider"></div>
-
-    </div>
-
     <a href="https://open.kakao.com/o/gZGOUhfi" target="_blank" class="kakao-card">
       <span class="kakao-icon">💬</span>
-      <span class="kakao-text">왜 이렇게 되었는지 알아보기 <span style="font-size:0.8em; opacity:0.7;">(pw: 0317720)</span></span>
+      <span class="kakao-text">왜 이렇게 되었는지 알아보기 <span class="kakao-pw">(pw: 0317720)</span></span>
       <span class="kakao-arrow">→</span>
     </a>
 
@@ -364,16 +362,17 @@
 
     function formatKRW(n) { return n.toLocaleString('ko-KR'); }
 
+    // 만원 단위까지 표시 → 매초 업데이트
     function toKorean(n) {
-      const jo       = n / 1_000_000_000_000n;
-      const rem1     = n % 1_000_000_000_000n;
-      const eok      = rem1 / 100_000_000n;
-      const rem2     = rem1 % 100_000_000n;
-      const cheonman = rem2 / 10_000_000n;
+      const jo   = n / 1_000_000_000_000n;
+      const rem1 = n % 1_000_000_000_000n;
+      const eok  = rem1 / 100_000_000n;
+      const rem2 = rem1 % 100_000_000n;
+      const man  = rem2 / 10_000n;
       let result = '';
-      if (jo > 0n)       result += jo.toLocaleString('ko-KR') + '조 ';
-      if (eok > 0n)      result += eok.toLocaleString('ko-KR') + '억 ';
-      if (cheonman > 0n) result += cheonman.toLocaleString('ko-KR') + '천만';
+      if (jo  > 0n) result += jo.toLocaleString('ko-KR') + '조 ';
+      if (eok > 0n) result += eok.toLocaleString('ko-KR') + '억 ';
+      if (man > 0n) result += man.toLocaleString('ko-KR') + '만';
       return result.trim() + '원';
     }
 
